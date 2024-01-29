@@ -1,0 +1,50 @@
+import pandas as pd
+
+# Sample user-item rating data (you can replace this with your own dataset)
+data = {
+    'User': ['User1', 'User1', 'User1', 'User2', 'User2', 'User3'],
+    'Item': ['Movie1', 'Movie2', 'Movie3', 'Movie1', 'Movie2', 'Movie3'],
+    'Rating': [5, 4, 3, 4, 5, 4]
+}
+
+df = pd.DataFrame(data)
+
+# Pivot the data to create a user-item matrix
+user_item_matrix = df.pivot_table(index='User', columns='Item', values='Rating', fill_value=0)
+
+# Calculate similarity between users using Pearson correlation
+user_similarity = user_item_matrix.corr(method='pearson')
+
+# Function to recommend items to a user
+def recommend_items(user, user_item_matrix, user_similarity):
+    # Get the items that the user has already rated
+    rated_items = user_item_matrix.loc[user][user_item_matrix.loc[user] > 0]
+    # Initialize a dictionary to store recommended items and their scores
+    recommendations = {}
+    # Iterate over other users to find similar users
+    for other_user in user_similarity.index:
+        # Skip if the user is the same as the input user
+        if other_user == user:
+            continue
+        # Iterate over items rated by the other user
+        for item in user_item_matrix.columns:
+            # Skip if the item is already rated by the input user
+            if item in rated_items:
+                continue
+            # Calculate a weighted score based on the rating and similarity
+            score = user_similarity.loc[user, other_user] * user_item_matrix.loc[other_user, item]
+            # Add the score to the recommendations dictionary
+            if item in recommendations:
+                recommendations[item] += score
+            else:
+                recommendations[item] = score
+    # Sort the recommendations by score in descending order
+    sorted_recommendations = sorted(recommendations.items(), key=lambda x: x[1], reverse=True)
+    return sorted_recommendations
+
+# Example: Recommend items to 'User1'
+user = 'User1'
+recommendations = recommend_items(user, user_item_matrix, user_similarity)
+print("Recommendations for", user, ":")
+for item, score in recommendations:
+    print(item, "- Score:", score)
